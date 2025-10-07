@@ -1,0 +1,15 @@
+.project
+.classpath
+.settings
+target/
+
+build
+*.class
+.gradle
+*.jar
+*.zip
+*.log
+bin/
+OLD
+OLD-*
+*.o

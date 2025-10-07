@@ -1,0 +1,156 @@
+
+buildscript {
+println "gradle version: " + gradle.gradleVersion
+println "JDK: " + System.getProperty("java.home")
+}
+
+plugins {
+id 'maven-publish'
+}
+
+def sourceEncoding = 'utf-8'
+def documentEncoding = 'utf-8'
+def env = System.env
+def gver = gradle.gradleVersion
+def osname = System.getProperty('os.name').toLowerCase()
+def osarch = System.getProperty("os.arch")
+def userHome = System.getProperty("user.home")
+
+allprojects {
+apply plugin: 'java'
+// sourceSets.main.java.srcDirs = ['src']
+// sourceSets.main.resources.srcDirs = ['resources']
+// sourceSets.test.java.srcDirs = ['test']
+if (gver < '5.0') {
+  // sourceSets.main.output.classesDir = 'build/classes'
+  // sourceSets.main.output.resourcesDir = 'build/resources'
+  // sourceSets.test.output.classesDir = 'build/test-classes'
+  // sourceSets.test.output.resourcesDir = 'build/test-resources'
+}
+repositories {
+  mavenLocal()
+  mavenCentral()
+}
+tasks.withType(JavaCompile) {
+  // options.compilerArgs << '-Xlint:unchecked,divzero'
+  options.deprecation = false
+  options.encoding = sourceEncoding
+  doFirst {
+    if (sourceCompatibility == '1.7' && env.JRE7_HOME != null) {
+        options.fork = true
+        if (gver < '5.0')
+          options.bootClasspath = "${env.JRE7_HOME}/lib/rt.jar"
+      // ↑ for gradle 4.x with JDK7
+        else
+          options.bootstrapClasspath = files("${env.JRE7_HOME}/lib/rt.jar")
+      // ↑ for gradle 5.x with JDK8
+    }
+    else if (sourceCompatibility == '1.6' && env.JRE6_HOME != null) {
+        options.fork = true
+        if (gver < '5.0')
+          options.bootClasspath = "${env.JRE6_HOME}/lib/rt.jar"
+        else
+          options.bootstrapClasspath = files("${env.JRE6_HOME}/lib/rt.jar")
+    }
+    else if (sourceCompatibility == '1.5' && env.JRE5_HOME != null) {
+        options.fork = true
+        if (gver < '5.0')
+          options.bootClasspath = "${env.JRE5_HOME}/lib/rt.jar"
+        else
+          options.bootstrapClasspath = files("${env.JRE5_HOME}/lib/rt.jar")
+    }
+    else if (sourceCompatibility == '1.4' && env.JRE4_HOME != null) {
+        options.fork = true
+        if (gver < '5.0')
+          options.bootClasspath = "${env.JRE4_HOME}/lib/rt.jar"
+        else
+          options.bootstrapClasspath = files("${env.JRE4_HOME}/lib/rt.jar")
+    }
+    else if (sourceCompatibility == '1.3' && env.JRE3_HOME != null) {
+        options.fork = true
+        if (gver < '5.0')
+          options.bootClasspath = "${env.JRE3_HOME}/lib/rt.jar"
+        else
+          options.bootstrapClasspath = files("${env.JRE3_HOME}/lib/rt.jar")
+    }
+    else if (sourceCompatibility == '1.2' && env.JRE2_HOME != null) {
+        options.fork = true
+        if (gver < '5.0')
+          options.bootClasspath = "${env.JRE2_HOME}/lib/rt.jar"
+        else
+          options.bootstrapClasspath = files("${env.JRE2_HOME}/lib/rt.jar")
+    }
+  }
+}
+javadoc {
+  source = sourceSets.main.allJava
+  classpath = sourceSets.main.compileClasspath
+  options.charSet = documentEncoding
+  options.encoding = sourceEncoding
+  options.source = "1.5"
+  if (env.DEBUG != null) options.memberLevel = JavadocMemberLevel.PACKAGE
+  options.addStringOption('Xdoclint:none', '-quiet')
+    if (env.JDK6_HOME != null) executable = file("${env.JDK6_HOME}/bin/javadoc.exe")
+  doLast {
+    println "INFO: open ${project.docsDir}/javadoc/index.html"
+  }
+}
+
+task zipdoc(type: Zip, dependsOn: javadoc) {
+  description 'javadoc を zipでアーカイブする'
+  destinationDir = file('../apidocs')
+  classifier = "apidoc-" + new Date().format('yyyy-MMdd')
+  extension = 'zip'
+  from "${project.docsDir}/javadoc"
+  excludes = ['build', '.*']
+  doLast {
+    println "INFO: created: ${archivePath}"
+  }
+}
+
+task copylib(type: Copy) {
+  description '依存するライブラリを収集して lib フォルダに格納する'
+// from (configurations.compile + configurations.testCompile)
+from configurations.compile
+into "lib" 
+}}
+
+group = 'org.jline'
+
+description '''JLine is a java library for reading and editing user input in console applications. It features
+tab-completion, command history, password masking, customizable keybindings, and pass-through handlers to use to
+chain to other console applications.'''
+version = '1.1.0'
+sourceCompatibility = '1.3'
+// targetCompatibility = '1.3'
+
+dependencies{
+  testCompile group: 'junit', name: 'junit', version: '3.8.1'
+}
+
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': 'JLine',
+            'Implementation-Version': "${version}"
+        )
+    }
+}
+
+publishing {
+publications {
+  mavenJline1(MavenPublication) {
+    from components.java
+    artifactId = 'jline'
+    groupId = 'org.jline'
+  }
+}
+repositories {
+  maven {
+    name = "localRepo"
+    url = uri("${userHome}/.m2/repository")
+    // url = uri("${buildDir}/repo")
+    // ここをローカルやリモートの Maven リポジトリ URL に変更可能
+  }
+}}
+
