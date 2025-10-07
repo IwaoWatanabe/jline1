@@ -33,6 +33,8 @@ public abstract class Terminal implements ConsoleOperations {
         term = null;
     }
 
+    static boolean verbose = Boolean.getBoolean("jline.terminal.verbose");
+
     /**
      *  <p>Configure and return the {@link Terminal} instance for the
      *  current platform. This will initialize any system settings
@@ -180,5 +182,15 @@ public abstract class Terminal implements ConsoleOperations {
         return Terminal.class.getResourceAsStream(
                 System.getProperty("os.name").toLowerCase().startsWith("mac") ?
                     "keybindings-mac.properties" : "keybindings.properties");
+    }
+
+    static java.lang.reflect.Method initCause;
+    static {
+        try {
+            Class [] TYPES = new Class[] { Throwable.class };
+            initCause = Throwable.class.getDeclaredMethod("initCause", TYPES);
+        } catch (NoSuchMethodException e) {
+            // Handle the exception
+        }
     }
 }

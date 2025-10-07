@@ -471,6 +471,27 @@ public class ConsoleReader implements ConsoleOperations {
         return prompt;
     }
 
+    static java.lang.reflect.Method appendCodePointMethod = null;
+    static { try {
+        appendCodePointMethod = StringBuffer.class.getMethod("appendCodePoint",
+            new Class[]{Integer.TYPE});
+        // since 1.5
+    } catch (Exception ignore) { } }
+
+    void appendCodePoint(int codePoint, StringBuffer sb) {
+        if (appendCodePointMethod != null) try {
+            appendCodePointMethod.invoke(sb, new Object[]{new Integer(codePoint)});
+            return;
+        } catch (Exception ignore) { }
+
+        if (codePoint < 0x10000) {
+            sb.append((char) codePoint);
+        } else {
+            sb.append((char) ((codePoint >>> 10) + 0xD800));
+            sb.append((char) ((codePoint & 0x3FF) + 0xDC00));
+        }
+    }
+
     /**
      * Read a line from the <i>in</i> {@link InputStream}, and return the line
      * (without any trailing newlines).
@@ -554,7 +575,7 @@ public class ConsoleReader implements ConsoleOperations {
                             break;
                             
                         case UNKNOWN:
-                            searchTerm.appendCodePoint(c);
+                            appendCodePoint(c, searchTerm);
                             searchIndex = history.searchBackwards(searchTerm.toString());
                             break;
 
@@ -699,7 +720,7 @@ public class ConsoleReader implements ConsoleOperations {
                             if (searchTerm != null) {
                                 previousSearchTerm = searchTerm.toString();
                             }
-                            searchTerm = new StringBuffer(buf.buffer);
+                            searchTerm = new StringBuffer(buf.buffer.toString());
                             state = SEARCH;
                             if (searchTerm.length() > 0) {
                                 searchIndex = history.searchBackwards(searchTerm.toString());

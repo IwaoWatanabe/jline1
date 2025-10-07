@@ -1,4 +1,5 @@
 #include "jline_WindowsTerminal.h"
+#include <conio.h>
 #include <windows.h>
 
 JNIEXPORT jint JNICALL Java_jline_WindowsTerminal_getConsoleMode
@@ -44,7 +45,9 @@ JNIEXPORT jint JNICALL Java_jline_WindowsTerminal_getWindowsTerminalWidth (JNIEn
 	HANDLE outputHandle = GetStdHandle (STD_OUTPUT_HANDLE);
 	PCONSOLE_SCREEN_BUFFER_INFO info =  malloc (sizeof (CONSOLE_SCREEN_BUFFER_INFO));
 	GetConsoleScreenBufferInfo (outputHandle, info);
-	return info->srWindow.Right - info->srWindow.Left+1;
+	jint rc = info->srWindow.Right - info->srWindow.Left+1;
+	free(info);
+	return rc;
 }
 
 JNIEXPORT jint JNICALL Java_jline_WindowsTerminal_getWindowsTerminalHeight (JNIEnv * env, jclass class)
@@ -53,5 +56,7 @@ JNIEXPORT jint JNICALL Java_jline_WindowsTerminal_getWindowsTerminalHeight (JNIE
 	HANDLE outputHandle = GetStdHandle (STD_OUTPUT_HANDLE);
 	PCONSOLE_SCREEN_BUFFER_INFO info =  malloc (sizeof (CONSOLE_SCREEN_BUFFER_INFO));
 	GetConsoleScreenBufferInfo (outputHandle, info);
-	return info->srWindow.Bottom - info->srWindow.Top+1;
+	jint rc = info->srWindow.Bottom - info->srWindow.Top+1;
+	free(info);
+	return rc;
 }

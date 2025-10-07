@@ -9,6 +9,8 @@ package jline;
 import java.io.*;
 import java.util.*;
 
+import jline.UnixTerminal.ReplayPrefixOneCharInputStream;
+
 /**
  *  <p>
  *  Terminal that is used for unix platforms. Terminal initialization
@@ -52,16 +54,25 @@ public class UnixTerminal extends Terminal {
     public UnixTerminal() {
         try {
             replayReader = new InputStreamReader(replayStream, encoding);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (java.io.IOException e) {
+            RuntimeException re = new RuntimeException("Unsupported encoding: " + encoding);
+            if (initCause != null) try { initCause.invoke(re, new Object[]{e}); } catch (Exception ie) {}
+            throw re;
         }
     }
    
     protected void checkBackspace(){
-        String[] ttyConfigSplit = ttyConfig.split(":|=");
+        String[] ttyConfigSplit = split(ttyConfig, ":=");
         backspaceDeleteSwitched = ttyConfigSplit.length >= 7 && "7f".equals(ttyConfigSplit[6]);
     }
     
+    String [] split(String str, String delim) {
+        java.util.ArrayList ta = new java.util.ArrayList();
+        java.util.StringTokenizer st = new java.util.StringTokenizer(str, delim);
+        while (st.hasMoreTokens()) { ta.add(st.nextToken()); }
+        return (String[]) ta.toArray(new String[ta.size()]);
+    }
+
     /**
      *  Remove line-buffered input by invoking "stty -icanon min 1"
      *  against the current terminal.

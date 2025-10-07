@@ -190,7 +190,7 @@ public class WindowsTerminal extends Terminal {
     private boolean echoEnabled;
     
     String encoding = System.getProperty("jline.WindowsTerminal.input.encoding", System.getProperty("file.encoding"));
-    ReplayPrefixOneCharInputStream replayStream = new ReplayPrefixOneCharInputStream(encoding);
+    ReplayPrefixOneCharInputStream replayStream = new ReplayPrefixOneCharInputStream(this, encoding);
     InputStreamReader replayReader;
     
     public WindowsTerminal() {
@@ -204,10 +204,12 @@ public class WindowsTerminal extends Terminal {
         
         try {
             replayReader = new InputStreamReader(replayStream, encoding);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (java.io.IOException e) {
+            RuntimeException re = new RuntimeException("Unsupported encoding: " + encoding);
+            if (initCause != null) try { initCause.invoke(re, new Object[]{e}); } catch (Exception ie) {}
+            throw re;
         }
-        
+        if (verbose) System.err.println("WindowsTerminal using encoding " + encoding);
     }
 
     private native int getConsoleMode();
@@ -283,10 +285,15 @@ public class WindowsTerminal extends Terminal {
         int bits = 32;
 
         // check for 64-bit systems and use to appropriate DLL
-        if (System.getProperty("os.arch").indexOf("64") != -1)
-            bits = 64;
+        String arch = System.getProperty("os.arch");
 
-        InputStream in = new BufferedInputStream(WindowsTerminal.class.getResourceAsStream(name + bits + ".dll"));
+        if (arch.indexOf("64") != -1)
+            bits = 64;
+        String srcDDL = name + "-" + arch + ".dll";
+        InputStream in = new BufferedInputStream(WindowsTerminal.class.getResourceAsStream(srcDDL));
+        if (in == null)
+            in = new BufferedInputStream(WindowsTerminal.class.getResourceAsStream(srcDDL = name + bits + ".dll"));
+        if (verbose) System.err.println(srcDDL + " copying..");
 
         OutputStream fout = null;
         try {
@@ -319,7 +326,9 @@ public class WindowsTerminal extends Terminal {
         f.deleteOnExit();
 
         // now actually load the DLL
-        System.load(f.getAbsolutePath());
+        String path = f.getAbsolutePath();
+        System.load(path);
+        if (verbose) System.err.println(path + " loaded.");
     }
 
     public int readVirtualKey(InputStream in) throws IOException {
@@ -458,10 +467,11 @@ public class WindowsTerminal extends Terminal {
         int byteLength;
         InputStream wrappedStream;
         int byteRead;
-
         final String encoding;
+        final WindowsTerminal terminal;
         
-        public ReplayPrefixOneCharInputStream(String encoding) {
+        public ReplayPrefixOneCharInputStream(WindowsTerminal terminal, String encoding) {
+            this.terminal = terminal;
             this.encoding = encoding;
         }
         
@@ -477,9 +487,19 @@ public class WindowsTerminal extends Terminal {
                 byteLength = 2;
             else if (encoding.equalsIgnoreCase("UTF-32"))
                 byteLength = 4;
+            else if(encoding.equalsIgnoreCase("MS932") || encoding.equalsIgnoreCase("Windows-31J")
+             || encoding.equalsIgnoreCase("Shift_JIS"))
+                setInputMS932(recorded, wrapped);
         }
-            
-            
+
+        void setInputMS932(int recorded, InputStream wrapped) throws IOException {
+            int n = firstByte & 255;
+            if(129 <= n && n <= 159 || 224 <= n && n <= 252)
+                this.byteLength = 2;
+            else
+                this.byteLength = 1;
+        }
+
         public void setInputUTF8(int recorded, InputStream wrapped) throws IOException {
             // 110yyyyy 10zzzzzz
             if ((firstByte & (byte) 0xE0) == (byte) 0xC0)
@@ -503,7 +523,7 @@ public class WindowsTerminal extends Terminal {
             if (byteRead == 1)
                 return firstByte;
 
-            return wrappedStream.read();
+            return terminal.readCharacter(wrappedStream);
         }
 
         /**
