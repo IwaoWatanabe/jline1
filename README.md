@@ -13,3 +13,13 @@ Description
 
 JLine 1.x is not supported.
 Please have a look at [JLine 3.x](https://github.com/jline/jline3).
+
+
+Update
+-----------
+2025.11.5
+
+- Added DLL for ARM64
+- Supports Japanese character input, but editing remains difficult
+  
+  

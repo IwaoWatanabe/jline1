@@ -1,7 +1,8 @@
 
 buildscript {
 println "gradle version: " + gradle.gradleVersion
-println "JDK: " + System.getProperty("java.home")
+println "JVM: " + System.getProperty("java.home") +
+  " arch: " + System.getProperty("os.arch")
 }
 
 plugins {
@@ -36,49 +37,29 @@ tasks.withType(JavaCompile) {
   options.deprecation = false
   options.encoding = sourceEncoding
   doFirst {
-    if (sourceCompatibility == '1.7' && env.JRE7_HOME != null) {
+    def bootClassPath = ''
+    if (sourceCompatibility == '1.8' && env.JRE8_HOME != null)
+        bootClassPath ="${env.JRE8_HOME}/lib/rt.jar"
+    else if (sourceCompatibility == '1.7' && env.JRE7_HOME != null)
+        bootClassPath = "${env.JRE7_HOME}/lib/rt.jar"
+    else if (sourceCompatibility == '1.6' && env.JRE6_HOME != null)
+        bootClassPath = "${env.JRE6_HOME}/lib/rt.jar"
+    else if (sourceCompatibility == '1.5' && env.JRE5_HOME != null)
+        bootClassPath = "${env.JRE5_HOME}/lib/rt.jar"
+    else if (sourceCompatibility == '1.4' && env.JRE4_HOME != null)
+        bootClassPath = "${env.JRE4_HOME}/lib/rt.jar"
+    else if (sourceCompatibility == '1.3' && env.JRE3_HOME != null)
+        bootClassPath = "${env.JRE3_HOME}/lib/rt.jar"
+
+    if (bootClassPath != '') {
+        println "INFO: bootstrapClasspath: ${bootClassPath}"
         options.fork = true
         if (gver < '5.0')
-          options.bootClasspath = "${env.JRE7_HOME}/lib/rt.jar"
+          options.bootClasspath = "${bootClassPath}"
       // ↑ for gradle 4.x with JDK7
         else
-          options.bootstrapClasspath = files("${env.JRE7_HOME}/lib/rt.jar")
-      // ↑ for gradle 5.x with JDK8
-    }
-    else if (sourceCompatibility == '1.6' && env.JRE6_HOME != null) {
-        options.fork = true
-        if (gver < '5.0')
-          options.bootClasspath = "${env.JRE6_HOME}/lib/rt.jar"
-        else
-          options.bootstrapClasspath = files("${env.JRE6_HOME}/lib/rt.jar")
-    }
-    else if (sourceCompatibility == '1.5' && env.JRE5_HOME != null) {
-        options.fork = true
-        if (gver < '5.0')
-          options.bootClasspath = "${env.JRE5_HOME}/lib/rt.jar"
-        else
-          options.bootstrapClasspath = files("${env.JRE5_HOME}/lib/rt.jar")
-    }
-    else if (sourceCompatibility == '1.4' && env.JRE4_HOME != null) {
-        options.fork = true
-        if (gver < '5.0')
-          options.bootClasspath = "${env.JRE4_HOME}/lib/rt.jar"
-        else
-          options.bootstrapClasspath = files("${env.JRE4_HOME}/lib/rt.jar")
-    }
-    else if (sourceCompatibility == '1.3' && env.JRE3_HOME != null) {
-        options.fork = true
-        if (gver < '5.0')
-          options.bootClasspath = "${env.JRE3_HOME}/lib/rt.jar"
-        else
-          options.bootstrapClasspath = files("${env.JRE3_HOME}/lib/rt.jar")
-    }
-    else if (sourceCompatibility == '1.2' && env.JRE2_HOME != null) {
-        options.fork = true
-        if (gver < '5.0')
-          options.bootClasspath = "${env.JRE2_HOME}/lib/rt.jar"
-        else
-          options.bootstrapClasspath = files("${env.JRE2_HOME}/lib/rt.jar")
+          options.bootstrapClasspath = files("${bootClassPath}")
+      // ↑ for gradle 5.x with JDK8 or later
     }
   }
 }
@@ -97,7 +78,7 @@ javadoc {
 }
 
 task zipdoc(type: Zip, dependsOn: javadoc) {
-  description 'javadoc を zipでアーカイブする'
+  description 'Zip the javadoc archive'
   destinationDir = file('../apidocs')
   classifier = "apidoc-" + new Date().format('yyyy-MMdd')
   extension = 'zip'
@@ -109,7 +90,7 @@ task zipdoc(type: Zip, dependsOn: javadoc) {
 }
 
 task copylib(type: Copy) {
-  description '依存するライブラリを収集して lib フォルダに格納する'
+  description 'Collect and store dependent libraries in the lib folder'
 // from (configurations.compile + configurations.testCompile)
 from configurations.compile
 into "lib" 
@@ -150,7 +131,7 @@ repositories {
     name = "localRepo"
     url = uri("${userHome}/.m2/repository")
     // url = uri("${buildDir}/repo")
-    // ここをローカルやリモートの Maven リポジトリ URL に変更可能
+    // You can change this to a local or remote Maven repository URL.
   }
 }}
 
